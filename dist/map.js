@@ -22,6 +22,7 @@ class ObservedRemoveMap       extends EventEmitter {
                         
                         
                                    
+                              
 
   constructor(entries                   , options          = {}) {
     super();
@@ -35,38 +36,38 @@ class ObservedRemoveMap       extends EventEmitter {
     if (!entries) {
       return;
     }
+    const promises = [];
     for (const [key, value] of entries) {
-      this.set(key, value);
+      promises.push(this.set(key, value));
     }
+    this.readyPromise = Promise.all(promises).then(() => {
+      // Resolve to void
+    }).catch((error) => {
+      this.emit('error', error);
+    });
   }
 
-  /* :: @@iterator(): Iterator<[K, V]> { return ({}: any); } */
-  // $FlowFixMe: computed property
-  [Symbol.iterator]() {
-    return this.entries();
-  }
-
-  dequeue() {
+  async dequeue() {
     if (this.publishTimeout) {
       return;
     }
     if (this.bufferPublishing > 0) {
       this.publishTimeout = setTimeout(() => this.publish(), this.bufferPublishing);
     } else {
-      this.publish();
+      await this.publish();
     }
   }
 
-  publish() {
+  async publish() {
     this.publishTimeout = null;
     const insertQueue = this.insertQueue;
     const deleteQueue = this.deleteQueue;
     this.insertQueue = [];
     this.deleteQueue = [];
-    this.sync([insertQueue, deleteQueue]);
+    await this.sync([insertQueue, deleteQueue]);
   }
 
-  flush() {
+  async flush() {
     const maxAgeString = (Date.now() - this.maxAge).toString(36).padStart(9, '0');
     for (const [id] of this.deletions) {
       if (id < maxAgeString) {
@@ -80,19 +81,23 @@ class ObservedRemoveMap       extends EventEmitter {
    * @param {Array<Array<any>>} queue - Array of insertions and deletions
    * @return {void}
    */
-  sync(queue                        = this.dump()) {
-    this.emit('publish', queue);
+  async sync(queue                       ) {
+    if (queue) {
+      this.emit('publish', queue);
+    } else {
+      this.emit('publish', await this.dump());
+    }
   }
 
   /**
    * Return an array containing all of the map's insertions and deletions.
    * @return {[Array<*>, Array<*>]>}
    */
-  dump()                      {
-    return [[...this.pairs], [...this.deletions]];
+  async dump()                               {
+    return Promise.resolve([[...this.pairs], [...this.deletions]]);
   }
 
-  process(queue                     , skipFlush           = false) {
+  async process(queue                     , skipFlush           = false) {
     const [insertions, deletions] = queue;
     for (const [id, key] of deletions) {
       this.deletions.set(id, key);
@@ -115,77 +120,84 @@ class ObservedRemoveMap       extends EventEmitter {
       }
     }
     if (!skipFlush) {
-      this.flush();
+      await this.flush();
     }
   }
 
-  set(key  , value  , id          = generateId()) {
+  async set(key  , value  , id          = generateId())                {
     const pair = this.pairs.get(key);
     const insertMessage = typeof value === 'undefined' ? [key, [id]] : [key, [id, value]];
     if (pair) {
       const deleteMessage = [pair[0], key];
-      this.process([[insertMessage], [deleteMessage]], true);
+      await this.process([[insertMessage], [deleteMessage]], true);
       this.deleteQueue.push(deleteMessage);
     } else {
-      this.process([[insertMessage], []], true);
+      await this.process([[insertMessage], []], true);
     }
     this.insertQueue.push(insertMessage);
-    this.dequeue();
-    return this;
+    await this.dequeue();
   }
 
-  get(key  )           { // eslint-disable-line consistent-return
+  async get(key  )                    { // eslint-disable-line consistent-return
     const pair = this.pairs.get(key);
     if (pair) {
       return pair[1];
     }
   }
 
-  delete(key  )      {
+  async delete(key  )                {
     const pair = this.pairs.get(key);
     if (pair) {
       const message = [pair[0], key];
-      this.process([[], [message]], true);
+      await this.process([[], [message]], true);
       this.deleteQueue.push(message);
-      this.dequeue();
+      await this.dequeue();
     }
   }
 
-  clear()       {
-    for (const key of this.keys()) {
-      this.delete(key);
+  async clear()                {
+    for await (const key of this.keys()) {
+      await this.delete(key);
     }
   }
 
-  * entries()                  {
-    for (const [key, [id, value]] of this.pairs) { // eslint-disable-line no-unused-vars
-      yield [key, value];
-    }
-  }
-
-  forEach(callback         , thisArg     )      {
+  async forEach(callback         , thisArg     )               {
     if (thisArg) {
-      for (const [key, value] of this.entries()) {
+      for await (const [key, value] of this.entries()) {
         callback.bind(thisArg)(value, key, this);
       }
     } else {
-      for (const [key, value] of this.entries()) {
+      for await (const [key, value] of this.entries()) {
         callback(value, key, this);
       }
     }
   }
 
-  has(key  )          {
+  async has(key  )                   {
     return !!this.pairs.get(key);
   }
 
-  keys()             {
-    return this.pairs.keys();
+  async* keys()                               {
+    for (const key of this.pairs.keys()) {
+      yield await Promise.resolve(key);
+    }
   }
 
-  * values()             {
+  async* entries()                                    {
+    for (const [key, [id, value]] of this.pairs) { // eslint-disable-line no-unused-vars
+      yield await Promise.resolve([key, value]);
+    }
+  }
+
+  /* :: @@asyncIterator()                        { return ({}     ); } */
+  // $FlowFixMe: computed property
+  [Symbol.asyncIterator]() {
+    return this.entries();
+  }
+
+  async* values()                               {
     for (const [id, value] of this.pairs.values()) { // eslint-disable-line no-unused-vars
-      yield value;
+      yield await Promise.resolve(value);
     }
   }
 

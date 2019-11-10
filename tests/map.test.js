@@ -4,44 +4,47 @@ const expect = require('expect');
 const uuid = require('uuid');
 const { ObservedRemoveMap } = require('../src');
 const { generateValue } = require('./lib/values');
+require('./lib/async-iterator-comparison');
 
 describe('Map', () => {
-  test('Set and delete values', () => {
+  test('Set and delete values', async () => {
     const keyA = uuid.v4();
     const keyB = uuid.v4();
     const valueA = generateValue();
     const valueB = generateValue();
     const map = new ObservedRemoveMap();
+    await map.readyPromise;
     expect(map.size).toEqual(0);
-    map.set(keyA, valueA);
-    expect(map.has(keyA)).toEqual(true);
-    expect(map.has(keyB)).toEqual(false);
+    await map.set(keyA, valueA);
+    await expect(map.has(keyA)).resolves.toEqual(true);
+    await expect(map.has(keyB)).resolves.toEqual(false);
     expect(map.size).toEqual(1);
-    map.set(keyB, valueB);
-    expect(map.has(keyA)).toEqual(true);
-    expect(map.has(keyB)).toEqual(true);
+    await map.set(keyB, valueB);
+    await expect(map.has(keyA)).resolves.toEqual(true);
+    await expect(map.has(keyB)).resolves.toEqual(true);
     expect(map.size).toEqual(2);
-    map.delete(keyB);
-    expect(map.has(keyA)).toEqual(true);
-    expect(map.has(keyB)).toEqual(false);
+    await map.delete(keyB);
+    await expect(map.has(keyA)).resolves.toEqual(true);
+    await expect(map.has(keyB)).resolves.toEqual(false);
     expect(map.size).toEqual(1);
-    map.delete(keyA);
-    expect(map.has(keyA)).toEqual(false);
-    expect(map.has(keyB)).toEqual(false);
+    await map.delete(keyA);
+    await expect(map.has(keyA)).resolves.toEqual(false);
+    await expect(map.has(keyB)).resolves.toEqual(false);
     expect(map.size).toEqual(0);
-    map.set(keyA, valueA);
-    expect(map.has(keyA)).toEqual(true);
-    expect(map.has(keyB)).toEqual(false);
+    await map.set(keyA, valueA);
+    await expect(map.has(keyA)).resolves.toEqual(true);
+    await expect(map.has(keyB)).resolves.toEqual(false);
     expect(map.size).toEqual(1);
-    map.set(keyB, valueB);
-    expect(map.has(keyA)).toEqual(true);
-    expect(map.has(keyB)).toEqual(true);
+    await map.set(keyB, valueB);
+    await expect(map.has(keyA)).resolves.toEqual(true);
+    await expect(map.has(keyB)).resolves.toEqual(true);
     expect(map.size).toEqual(2);
-    expect([...map.values()]).toEqual([valueA, valueB]);
-    expect([...map.keys()]).toEqual([keyA, keyB]);
-    expect([...map]).toEqual([[keyA, valueA], [keyB, valueB]]);
-    expect([...map.entries()]).toEqual([[keyA, valueA], [keyB, valueB]]);
+    await expect(map.values()).asyncIteratesTo([valueA, valueB]);
+    await expect(map.keys()).asyncIteratesTo([keyA, keyB]);
+    await expect(map).asyncIteratesTo([[keyA, valueA], [keyB, valueB]]);
+    await expect(map.entries()).asyncIteratesTo([[keyA, valueA], [keyB, valueB]]);
   });
+
 
   test('Emit set and delete events', async () => {
     const keyA = uuid.v4();
@@ -49,6 +52,7 @@ describe('Map', () => {
     const valueA = generateValue();
     const valueB = generateValue();
     const map = new ObservedRemoveMap();
+    await map.readyPromise;
     const setAPromise = new Promise((resolve) => {
       map.once('set', (k, v) => {
         expect(k).toEqual(keyA);
@@ -88,7 +92,7 @@ describe('Map', () => {
   });
 
 
-  test('Iterate through values', () => {
+  test('Iterate through values', async () => {
     const keyA = uuid.v4();
     const keyB = uuid.v4();
     const keyC = uuid.v4();
@@ -96,8 +100,9 @@ describe('Map', () => {
     const valueB = generateValue();
     const valueC = generateValue();
     const map = new ObservedRemoveMap([[keyA, valueA], [keyB, valueB], [keyC, valueC]]);
+    await map.readyPromise;
     let i = 0;
-    for (const [k, v] of map) { // eslint-disable-line no-restricted-syntax
+    for await (const [k, v] of map) { // eslint-disable-line no-restricted-syntax
       if (i === 0) {
         expect(k).toEqual(keyA);
         expect(v).toEqual(valueA);
@@ -110,7 +115,7 @@ describe('Map', () => {
       }
       i += 1;
     }
-    map.forEach((v, k) => {
+    await map.forEach((v, k) => {
       if (k === keyA) {
         expect(v).toEqual(valueA);
       } else if (k === keyB) {
@@ -121,7 +126,8 @@ describe('Map', () => {
     });
   });
 
-  test('Clear values', () => {
+
+  test('Clear values', async () => {
     const keyA = uuid.v4();
     const keyB = uuid.v4();
     const keyC = uuid.v4();
@@ -129,13 +135,14 @@ describe('Map', () => {
     const valueB = generateValue();
     const valueC = generateValue();
     const map = new ObservedRemoveMap([[keyA, valueA], [keyB, valueB], [keyC, valueC]], { maxAge: 0, bufferPublishing: 0 });
+    await map.readyPromise;
     expect(map.size).toEqual(3);
-    map.clear();
+    await map.clear();
     expect(map.size).toEqual(0);
     expect(map.insertQueue.length).toEqual(0);
     expect(map.deleteQueue.length).toEqual(0);
     expect(map.deletions.size).toEqual(3);
-    map.flush();
+    await map.flush();
     expect(map.size).toEqual(0);
     expect(map.insertQueue.length).toEqual(0);
     expect(map.deleteQueue.length).toEqual(0);
@@ -150,7 +157,9 @@ describe('Map', () => {
     const valueY = generateValue();
     const valueZ = generateValue();
     const alice = new ObservedRemoveMap();
+    await alice.readyPromise;
     const bob = new ObservedRemoveMap();
+    await bob.readyPromise;
     let aliceAddCount = 0;
     let bobAddCount = 0;
     let aliceDeleteCount = 0;
@@ -165,34 +174,34 @@ describe('Map', () => {
     bob.on('publish', (message) => {
       alice.process(message);
     });
-    alice.set(keyX, valueX);
-    alice.set(keyY, valueY);
-    alice.set(keyZ, valueZ);
+    await alice.set(keyX, valueX);
+    await alice.set(keyY, valueY);
+    await alice.set(keyZ, valueZ);
     while (aliceAddCount !== 3 || bobAddCount !== 3) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    expect(alice.get(keyX)).toEqual(valueX);
-    expect(alice.get(keyY)).toEqual(valueY);
-    expect(alice.get(keyZ)).toEqual(valueZ);
-    expect(bob.get(keyX)).toEqual(valueX);
-    expect(bob.get(keyY)).toEqual(valueY);
-    expect(bob.get(keyZ)).toEqual(valueZ);
-    expect([...alice]).toEqual([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
-    expect([...bob]).toEqual([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
-    bob.delete(keyX);
-    bob.delete(keyY);
-    bob.delete(keyZ);
+    await expect(alice.get(keyX)).resolves.toEqual(valueX);
+    await expect(alice.get(keyY)).resolves.toEqual(valueY);
+    await expect(alice.get(keyZ)).resolves.toEqual(valueZ);
+    await expect(bob.get(keyX)).resolves.toEqual(valueX);
+    await expect(bob.get(keyY)).resolves.toEqual(valueY);
+    await expect(bob.get(keyZ)).resolves.toEqual(valueZ);
+    await expect(alice).asyncIteratesTo([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
+    await expect(bob).asyncIteratesTo([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
+    await bob.delete(keyX);
+    await bob.delete(keyY);
+    await bob.delete(keyZ);
     while (aliceDeleteCount !== 3 || bobDeleteCount !== 3) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    expect(alice.get(keyX)).toBeUndefined();
-    expect(alice.get(keyY)).toBeUndefined();
-    expect(alice.get(keyZ)).toBeUndefined();
-    expect(bob.get(keyX)).toBeUndefined();
-    expect(bob.get(keyY)).toBeUndefined();
-    expect(bob.get(keyZ)).toBeUndefined();
-    expect([...alice]).toEqual([]);
-    expect([...bob]).toEqual([]);
+    await expect(alice.get(keyX)).resolves.toBeUndefined();
+    await expect(alice.get(keyY)).resolves.toBeUndefined();
+    await expect(alice.get(keyZ)).resolves.toBeUndefined();
+    await expect(bob.get(keyX)).resolves.toBeUndefined();
+    await expect(bob.get(keyY)).resolves.toBeUndefined();
+    await expect(bob.get(keyZ)).resolves.toBeUndefined();
+    expect(alice).asyncIteratesTo([]);
+    expect(bob).asyncIteratesTo([]);
   });
 
   test('Flush deletions', async () => {
@@ -202,17 +211,19 @@ describe('Map', () => {
     const valueX = generateValue();
     const valueY = generateValue();
     const valueZ = generateValue();
-    const map = new ObservedRemoveMap([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]], { maxAge: 100 });
-    map.delete(keyX);
-    map.delete(keyY);
-    map.delete(keyZ);
+    const map = new ObservedRemoveMap([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]], { maxAge: 300 });
+    await map.readyPromise;
+    await map.delete(keyX);
+    await map.delete(keyY);
+    await map.delete(keyZ);
     expect(map.deletions.size).toEqual(3);
-    map.flush();
+    await map.flush();
     expect(map.deletions.size).toEqual(3);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    map.flush();
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await map.flush();
     expect(map.deletions.size).toEqual(0);
   });
+
 
   test('Synchronize set and delete events', async () => {
     const keyX = uuid.v4();
@@ -221,6 +232,8 @@ describe('Map', () => {
     const valueY = generateValue();
     const alice = new ObservedRemoveMap();
     const bob = new ObservedRemoveMap();
+    await alice.readyPromise;
+    await bob.readyPromise;
     alice.on('publish', (message) => {
       bob.process(message);
     });
@@ -241,9 +254,9 @@ describe('Map', () => {
         resolve();
       });
     });
-    bob.set(keyX, valueX);
+    await bob.set(keyX, valueX);
     await aliceSetXPromise;
-    bob.delete(keyX);
+    await bob.delete(keyX);
     await aliceDeleteXPromise;
     const bobSetYPromise = new Promise((resolve) => {
       bob.once('set', (key, value) => {
@@ -259,11 +272,12 @@ describe('Map', () => {
         resolve();
       });
     });
-    alice.set(keyY, valueY);
+    await alice.set(keyY, valueY);
     await bobSetYPromise;
-    alice.delete(keyY);
+    await alice.delete(keyY);
     await bobDeleteYPromise;
   });
+
 
   test('Should not emit events for remote set/delete combos on sync', async () => {
     const keyX = uuid.v4();
@@ -272,10 +286,12 @@ describe('Map', () => {
     const valueY = generateValue();
     const alice = new ObservedRemoveMap();
     const bob = new ObservedRemoveMap();
-    alice.set(keyX, valueX);
-    alice.delete(keyX);
-    bob.set(keyY, valueY);
-    bob.delete(keyY);
+    await alice.readyPromise;
+    await bob.readyPromise;
+    await alice.set(keyX, valueX);
+    await alice.delete(keyX);
+    await bob.set(keyY, valueY);
+    await bob.delete(keyY);
     await new Promise((resolve) => setTimeout(resolve, 250));
     const bobPromise = new Promise((resolve, reject) => {
       bob.once('set', () => {
@@ -301,15 +317,16 @@ describe('Map', () => {
     bob.on('publish', (message) => {
       alice.process(message);
     });
-    alice.sync();
-    bob.sync();
+    await alice.sync();
+    await bob.sync();
     await bobPromise;
     await alicePromise;
-    expect(alice.get(keyX)).toBeUndefined();
-    expect(alice.get(keyY)).toBeUndefined();
-    expect(bob.get(keyX)).toBeUndefined();
-    expect(bob.get(keyY)).toBeUndefined();
+    await expect(alice.get(keyX)).resolves.toBeUndefined();
+    await expect(alice.get(keyY)).resolves.toBeUndefined();
+    await expect(bob.get(keyX)).resolves.toBeUndefined();
+    await expect(bob.get(keyY)).resolves.toBeUndefined();
   });
+
 
   test('Synchronize mixed maps using sync', async () => {
     const keyA = uuid.v4();
@@ -326,19 +343,21 @@ describe('Map', () => {
     const valueZ = generateValue();
     const alice = new ObservedRemoveMap();
     const bob = new ObservedRemoveMap();
-    alice.set(keyA, valueA);
-    bob.set(keyX, valueX);
-    alice.set(keyB, valueB);
-    bob.set(keyY, valueY);
-    alice.set(keyC, valueC);
-    bob.set(keyZ, valueZ);
+    await alice.readyPromise;
+    await bob.readyPromise;
+    await alice.set(keyA, valueA);
+    await bob.set(keyX, valueX);
+    await alice.set(keyB, valueB);
+    await bob.set(keyY, valueY);
+    await alice.set(keyC, valueC);
+    await bob.set(keyZ, valueZ);
     let aliceAddCount = 0;
     let bobAddCount = 0;
     let aliceDeleteCount = 0;
     let bobDeleteCount = 0;
     await new Promise((resolve) => setTimeout(resolve, 100));
-    expect([...alice]).toEqual([[keyA, valueA], [keyB, valueB], [keyC, valueC]]);
-    expect([...bob]).toEqual([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
+    await expect(alice).asyncIteratesTo([[keyA, valueA], [keyB, valueB], [keyC, valueC]]);
+    await expect(bob).asyncIteratesTo([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
     alice.on('set', () => (aliceAddCount += 1));
     bob.on('set', () => (bobAddCount += 1));
     alice.on('delete', () => (aliceDeleteCount += 1));
@@ -349,32 +368,31 @@ describe('Map', () => {
     bob.on('publish', (message) => {
       alice.process(message);
     });
-    alice.sync();
-    bob.sync();
+    await alice.sync();
+    await bob.sync();
     while (aliceAddCount !== 3 || bobAddCount !== 3) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    expect([...alice]).toEqual(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
-    expect([...bob]).toEqual(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
+    await expect(alice).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
+    await expect(bob).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
   });
+
 
   test('Key-value pairs should not repeat', async () => {
     const key = uuid.v4();
     const value1 = generateValue();
     const value2 = generateValue();
     const alice = new ObservedRemoveMap();
-    alice.set(key, value1);
-    alice.set(key, value2);
-    expect([...alice].length).toEqual(1);
-    expect([...alice.entries()].length).toEqual(1);
-    expect([...alice.keys()].length).toEqual(1);
-    expect([...alice.values()].length).toEqual(1);
-    expect([...alice]).toEqual([[key, value2]]);
-    expect([...alice.entries()]).toEqual([[key, value2]]);
-    expect([...alice.keys()]).toEqual([key]);
-    expect([...alice.values()]).toEqual([value2]);
-    expect(alice.get(key)).toEqual(value2);
+    await alice.readyPromise;
+    await alice.set(key, value1);
+    await alice.set(key, value2);
+    await expect(alice).asyncIteratesTo([[key, value2]]);
+    await expect(alice.entries()).asyncIteratesTo([[key, value2]]);
+    await expect(alice.keys()).asyncIteratesTo([key]);
+    await expect(alice.values()).asyncIteratesTo([value2]);
+    await expect(alice.get(key)).resolves.toEqual(value2);
   });
+
 
   test('Synchronizes 100 asynchrous maps', async () => {
     const keyA = uuid.v4();
@@ -407,6 +425,7 @@ describe('Map', () => {
     };
     for (let i = 0; i < 100; i += 1) {
       const map = new ObservedRemoveMap();
+      await map.readyPromise;
       map.on('publish', (message) => publish(i, message));
       subscribe(i, (message) => map.process(message));
       maps.push(map);
@@ -420,46 +439,48 @@ describe('Map', () => {
     bob.on('set', () => (bobAddCount += 1));
     alice.on('delete', () => (aliceDeleteCount += 1));
     bob.on('delete', () => (bobDeleteCount += 1));
-    alice.set(keyA, valueA);
-    bob.set(keyB, valueB);
-    alice.set(keyC, valueC);
+    await alice.set(keyA, valueA);
+    await bob.set(keyB, valueB);
+    await alice.set(keyC, valueC);
     while (aliceAddCount !== 3 || bobAddCount !== 3) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    bob.delete(keyC);
-    alice.delete(keyB);
-    bob.delete(keyA);
+    await bob.delete(keyC);
+    await alice.delete(keyB);
+    await bob.delete(keyA);
     while (aliceDeleteCount !== 3 || bobDeleteCount !== 3) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    expect([...alice]).toEqual([]);
-    expect([...bob]).toEqual([]);
+    await expect(alice).asyncIteratesTo([]);
+    await expect(bob).asyncIteratesTo([]);
   });
 
   test('Synchronize out of order sets', async () => {
     const alice = new ObservedRemoveMap([]);
     const bob = new ObservedRemoveMap([]);
+    await alice.readyPromise;
+    await bob.readyPromise;
     const key = uuid.v4();
     const value1 = generateValue();
     const value2 = generateValue();
-    alice.set(key, value1);
-    const aliceDump1 = alice.dump();
-    alice.set(key, value2);
-    const aliceDump2 = alice.dump();
-    bob.process(aliceDump2);
-    expect(bob.get(key)).toEqual(value2);
-    bob.delete(key);
-    expect(bob.get(key)).toBeUndefined();
-    const bobDump1 = bob.dump();
-    alice.process(bobDump1);
-    expect(alice.get(key)).toBeUndefined();
-    bob.process(aliceDump1);
-    expect(alice.get(key)).toBeUndefined();
-    expect(bob.get(key)).toBeUndefined();
-    const bobDump2 = bob.dump();
-    alice.process(bobDump2);
-    expect(alice.get(key)).toBeUndefined();
-    expect(bob.get(key)).toBeUndefined();
+    await alice.set(key, value1);
+    const aliceDump1 = await alice.dump();
+    await alice.set(key, value2);
+    const aliceDump2 = await alice.dump();
+    await bob.process(aliceDump2);
+    await expect(bob.get(key)).resolves.toEqual(value2);
+    await bob.delete(key);
+    await expect(bob.get(key)).resolves.toBeUndefined();
+    const bobDump1 = await bob.dump();
+    await alice.process(bobDump1);
+    await expect(alice.get(key)).resolves.toBeUndefined();
+    await bob.process(aliceDump1);
+    await expect(alice.get(key)).resolves.toBeUndefined();
+    await expect(bob.get(key)).resolves.toBeUndefined();
+    const bobDump2 = await bob.dump();
+    await alice.process(bobDump2);
+    await expect(alice.get(key)).resolves.toBeUndefined();
+    await expect(bob.get(key)).resolves.toBeUndefined();
   });
 });
 

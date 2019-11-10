@@ -2,7 +2,6 @@
 
 .*/node_modules/documentation/*
 <PROJECT_ROOT>/dist/*
-
 [include]
 
 [libs]

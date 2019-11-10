@@ -132,7 +132,7 @@ See: <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_O
 
 #### Parameters
 
--   `entries` **Iterable&lt;\[K, V]>** 
+-   `entries` **Iterable&lt;\[K, V]>?** 
 -   `options` **Options**  (optional, default `{}`)
 
 #### sync
@@ -141,7 +141,7 @@ Emit a 'publish' event containing a specified queue or all of the set's insertio
 
 ##### Parameters
 
--   `queue` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>>** Array of insertions and deletions (optional, default `this.dump()`)
+-   `queue` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>>** Array of insertions and deletions
 
 Returns **void** 
 
@@ -149,4 +149,4 @@ Returns **void**
 
 Return an array containing all of the map's insertions and deletions.
 
-Returns **\[[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>, [Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>]** 
+Returns **[Promise](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;\[[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>, [Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>]>** 

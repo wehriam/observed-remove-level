@@ -22,6 +22,7 @@ class ObservedRemoveMap<K, V> extends EventEmitter {
   deleteQueue: Array<*>;
   insertQueue: Array<*>;
   publishTimeout: null | TimeoutID;
+  readyPromise: Promise<void>;
 
   constructor(entries?: Iterable<[K, V]>, options?:Options = {}) {
     super();
@@ -35,38 +36,38 @@ class ObservedRemoveMap<K, V> extends EventEmitter {
     if (!entries) {
       return;
     }
+    const promises = [];
     for (const [key, value] of entries) {
-      this.set(key, value);
+      promises.push(this.set(key, value));
     }
+    this.readyPromise = Promise.all(promises).then(() => {
+      // Resolve to void
+    }).catch((error) => {
+      this.emit('error', error);
+    });
   }
 
-  /* :: @@iterator(): Iterator<[K, V]> { return ({}: any); } */
-  // $FlowFixMe: computed property
-  [Symbol.iterator]() {
-    return this.entries();
-  }
-
-  dequeue() {
+  async dequeue() {
     if (this.publishTimeout) {
       return;
     }
     if (this.bufferPublishing > 0) {
       this.publishTimeout = setTimeout(() => this.publish(), this.bufferPublishing);
     } else {
-      this.publish();
+      await this.publish();
     }
   }
 
-  publish() {
+  async publish() {
     this.publishTimeout = null;
     const insertQueue = this.insertQueue;
     const deleteQueue = this.deleteQueue;
     this.insertQueue = [];
     this.deleteQueue = [];
-    this.sync([insertQueue, deleteQueue]);
+    await this.sync([insertQueue, deleteQueue]);
   }
 
-  flush() {
+  async flush() {
     const maxAgeString = (Date.now() - this.maxAge).toString(36).padStart(9, '0');
     for (const [id] of this.deletions) {
       if (id < maxAgeString) {
@@ -80,19 +81,23 @@ class ObservedRemoveMap<K, V> extends EventEmitter {
    * @param {Array<Array<any>>} queue - Array of insertions and deletions
    * @return {void}
    */
-  sync(queue?: [Array<*>, Array<*>] = this.dump()) {
-    this.emit('publish', queue);
+  async sync(queue?: [Array<*>, Array<*>]) {
+    if (queue) {
+      this.emit('publish', queue);
+    } else {
+      this.emit('publish', await this.dump());
+    }
   }
 
   /**
    * Return an array containing all of the map's insertions and deletions.
    * @return {[Array<*>, Array<*>]>}
    */
-  dump():[Array<*>, Array<*>] {
-    return [[...this.pairs], [...this.deletions]];
+  async dump():Promise<[Array<*>, Array<*>]> {
+    return Promise.resolve([[...this.pairs], [...this.deletions]]);
   }
 
-  process(queue:[Array<*>, Array<*>], skipFlush?: boolean = false) {
+  async process(queue:[Array<*>, Array<*>], skipFlush?: boolean = false) {
     const [insertions, deletions] = queue;
     for (const [id, key] of deletions) {
       this.deletions.set(id, key);
@@ -115,77 +120,84 @@ class ObservedRemoveMap<K, V> extends EventEmitter {
       }
     }
     if (!skipFlush) {
-      this.flush();
+      await this.flush();
     }
   }
 
-  set(key:K, value:V, id?: string = generateId()) {
+  async set(key:K, value:V, id?: string = generateId()): Promise<void> {
     const pair = this.pairs.get(key);
     const insertMessage = typeof value === 'undefined' ? [key, [id]] : [key, [id, value]];
     if (pair) {
       const deleteMessage = [pair[0], key];
-      this.process([[insertMessage], [deleteMessage]], true);
+      await this.process([[insertMessage], [deleteMessage]], true);
       this.deleteQueue.push(deleteMessage);
     } else {
-      this.process([[insertMessage], []], true);
+      await this.process([[insertMessage], []], true);
     }
     this.insertQueue.push(insertMessage);
-    this.dequeue();
-    return this;
+    await this.dequeue();
   }
 
-  get(key:K): V | void { // eslint-disable-line consistent-return
+  async get(key:K): Promise<V | void> { // eslint-disable-line consistent-return
     const pair = this.pairs.get(key);
     if (pair) {
       return pair[1];
     }
   }
 
-  delete(key:K):void {
+  async delete(key:K): Promise<void> {
     const pair = this.pairs.get(key);
     if (pair) {
       const message = [pair[0], key];
-      this.process([[], [message]], true);
+      await this.process([[], [message]], true);
       this.deleteQueue.push(message);
-      this.dequeue();
+      await this.dequeue();
     }
   }
 
-  clear(): void {
-    for (const key of this.keys()) {
-      this.delete(key);
+  async clear(): Promise<void> {
+    for await (const key of this.keys()) {
+      await this.delete(key);
     }
   }
 
-  * entries():Iterator<[K, V]> {
-    for (const [key, [id, value]] of this.pairs) { // eslint-disable-line no-unused-vars
-      yield [key, value];
-    }
-  }
-
-  forEach(callback:Function, thisArg?:any):void {
+  async forEach(callback:Function, thisArg?:any):Promise<void> {
     if (thisArg) {
-      for (const [key, value] of this.entries()) {
+      for await (const [key, value] of this.entries()) {
         callback.bind(thisArg)(value, key, this);
       }
     } else {
-      for (const [key, value] of this.entries()) {
+      for await (const [key, value] of this.entries()) {
         callback(value, key, this);
       }
     }
   }
 
-  has(key:K): boolean {
+  async has(key:K): Promise<boolean> {
     return !!this.pairs.get(key);
   }
 
-  keys():Iterator<K> {
-    return this.pairs.keys();
+  async* keys():AsyncGenerator<K, void, void> {
+    for (const key of this.pairs.keys()) {
+      yield await Promise.resolve(key);
+    }
   }
 
-  * values():Iterator<V> {
+  async* entries():AsyncGenerator<[K, V], void, void> {
+    for (const [key, [id, value]] of this.pairs) { // eslint-disable-line no-unused-vars
+      yield await Promise.resolve([key, value]);
+    }
+  }
+
+  /* :: @@asyncIterator(): AsyncIterator<[K, V]> { return ({}: any); } */
+  // $FlowFixMe: computed property
+  [Symbol.asyncIterator]() {
+    return this.entries();
+  }
+
+  async* values():AsyncGenerator<V, void, void> {
     for (const [id, value] of this.pairs.values()) { // eslint-disable-line no-unused-vars
-      yield value;
+      yield await Promise.resolve(value);
     }
   }
 

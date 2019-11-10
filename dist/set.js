@@ -48,7 +48,7 @@ class ObservedRemoveSet    extends EventEmitter {
     }
   }
 
-  /* :: @@iterator(): Iterator<T> { return ({}: any); } */
+  /* :: @@iterator()              { return ({}     ); } */
   // $FlowFixMe: computed property
   * [Symbol.iterator]() {
     for (const pair of this.pairs.values()) {
