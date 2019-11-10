@@ -1,12 +1,26 @@
 // @flow
 
+const os = require('os');
+const path = require('path');
 const expect = require('expect');
 const uuid = require('uuid');
+const level = require('level');
 const { ObservedRemoveMap } = require('../src');
 const { generateValue } = require('./lib/values');
 require('./lib/async-iterator-comparison');
 
 describe('Map', () => {
+  let db;
+
+  beforeAll(async () => {
+    const location = path.join(os.tmpdir(), uuid.v4());
+    db = level(location, { valueEncoding: 'json' });
+  });
+
+  afterAll(async () => {
+    await db.close();
+  });
+
   test('Set and delete values', async () => {
     const keyA = uuid.v4();
     const keyB = uuid.v4();
