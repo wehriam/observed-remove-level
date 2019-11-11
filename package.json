@@ -1,8 +1,8 @@
 {
-  "name": "observed-remove",
+  "name": "observed-remove-level",
   "version": "2.2.5",
   "main": "dist/index.js",
-  "repository": "git@github.com:wehriam/observed-remove",
+  "repository": "git@github.com:wehriam/observed-remove-level",
   "author": "John Wehr <johnwehr@gmail.com>",
   "license": "MIT",
   "scripts": {
@@ -33,7 +33,7 @@
       "src/*.js"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!observed-remove)/"
+      "node_modules/(?!observed-remove-level)/"
     ],
     "transform": {
       "^.+\\.js(?:\\.flow)?$": "jest-flow-transform"
