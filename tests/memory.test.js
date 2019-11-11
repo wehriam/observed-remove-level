@@ -1,9 +1,15 @@
 // @flow
 
 // const expect = require('expect');
+const os = require('os');
+const path = require('path');
+const level = require('level');
 const uuid = require('uuid');
 const { ObservedRemoveMap } = require('../src');
 const { generateValue } = require('./lib/values');
+
+jest.setTimeout(60000);
+
 
 const memoryDelta = (start:Object) => {
   const end = process.memoryUsage();
@@ -16,15 +22,26 @@ const memoryDelta = (start:Object) => {
 };
 
 describe('Map Memory Test', () => {
-  test('Set and delete values', () => {
-    const map = new ObservedRemoveMap();
+  let db;
+
+  beforeAll(async () => {
+    const location = path.join(os.tmpdir(), uuid.v4());
+    db = level(location, { valueEncoding: 'json' });
+  });
+
+  afterAll(async () => {
+    await db.close();
+  });
+
+  test('Set and delete values', async () => {
+    const map = new ObservedRemoveMap(db);
     const startMemoryUsage = process.memoryUsage();
     for (let i = 0; i < 100000; i += 1) {
       const key = uuid.v4();
       const value = generateValue();
-      map.set(key, value);
+      await map.set(key, value);
       if (i % 1000 === 1) {
-        map.publish();
+        await map.publish();
       }
     }
     console.log(JSON.stringify(memoryDelta(startMemoryUsage), null, 2));
