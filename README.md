@@ -132,7 +132,8 @@ See: <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_O
 
 #### Parameters
 
--   `entries` **Iterable&lt;\[K, V]>?** 
+-   `db` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)** 
+-   `entries` **Iterable&lt;\[[string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String), V]>?** 
 -   `options` **Options**  (optional, default `{}`)
 
 #### sync

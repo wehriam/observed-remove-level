@@ -26,7 +26,7 @@ describe('Map', () => {
     const keyB = uuid.v4();
     const valueA = generateValue();
     const valueB = generateValue();
-    const map = new ObservedRemoveMap();
+    const map = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await map.readyPromise;
     expect(map.size).toEqual(0);
     await map.set(keyA, valueA);
@@ -53,10 +53,10 @@ describe('Map', () => {
     await expect(map.has(keyA)).resolves.toEqual(true);
     await expect(map.has(keyB)).resolves.toEqual(true);
     expect(map.size).toEqual(2);
-    await expect(map.values()).asyncIteratesTo([valueA, valueB]);
-    await expect(map.keys()).asyncIteratesTo([keyA, keyB]);
-    await expect(map).asyncIteratesTo([[keyA, valueA], [keyB, valueB]]);
-    await expect(map.entries()).asyncIteratesTo([[keyA, valueA], [keyB, valueB]]);
+    await expect(map.values()).asyncIteratesTo(expect.arrayContaining([valueA, valueB]));
+    await expect(map.keys()).asyncIteratesTo(expect.arrayContaining([keyA, keyB]));
+    await expect(map).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyB, valueB]]));
+    await expect(map.entries()).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyB, valueB]]));
   });
 
 
@@ -65,39 +65,43 @@ describe('Map', () => {
     const keyB = uuid.v4();
     const valueA = generateValue();
     const valueB = generateValue();
-    const map = new ObservedRemoveMap();
+    const map = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await map.readyPromise;
     const setAPromise = new Promise((resolve) => {
-      map.once('set', (k, v) => {
-        expect(k).toEqual(keyA);
-        expect(v).toEqual(valueA);
-        resolve();
+      map.on('set', (k, v) => {
+        if (k === keyA) {
+          expect(v).toEqual(valueA);
+          resolve();
+        }
       });
       map.set(keyA, valueA);
     });
     const setBPromise = new Promise((resolve) => {
-      map.once('set', (k, v) => {
-        expect(k).toEqual(keyB);
-        expect(v).toEqual(valueB);
-        resolve();
+      map.on('set', (k, v) => {
+        if (k === keyB) {
+          expect(v).toEqual(valueB);
+          resolve();
+        }
       });
       map.set(keyB, valueB);
     });
     await setAPromise;
     await setBPromise;
     const deleteAPromise = new Promise((resolve) => {
-      map.once('delete', (k, v) => {
-        expect(k).toEqual(keyA);
-        expect(v).toEqual(valueA);
-        resolve();
+      map.on('delete', (k, v) => {
+        if (k === keyA) {
+          expect(v).toEqual(valueA);
+          resolve();
+        }
       });
       map.delete(keyA);
     });
     const deleteBPromise = new Promise((resolve) => {
-      map.once('delete', (k, v) => {
-        expect(k).toEqual(keyB);
-        expect(v).toEqual(valueB);
-        resolve();
+      map.on('delete', (k, v) => {
+        if (k === keyB) {
+          expect(v).toEqual(valueB);
+          resolve();
+        }
       });
       map.delete(keyB);
     });
@@ -113,21 +117,18 @@ describe('Map', () => {
     const valueA = generateValue();
     const valueB = generateValue();
     const valueC = generateValue();
-    const map = new ObservedRemoveMap([[keyA, valueA], [keyB, valueB], [keyC, valueC]]);
+    const map = new ObservedRemoveMap(db, [[keyA, valueA], [keyB, valueB], [keyC, valueC]], { namespace: uuid.v4() });
     await map.readyPromise;
-    let i = 0;
     for await (const [k, v] of map) { // eslint-disable-line no-restricted-syntax
-      if (i === 0) {
-        expect(k).toEqual(keyA);
+      if (k === keyA) {
         expect(v).toEqual(valueA);
-      } else if (i === 1) {
-        expect(k).toEqual(keyB);
+      } else if (k === keyB) {
         expect(v).toEqual(valueB);
-      } else if (i === 2) {
-        expect(k).toEqual(keyC);
+      } else if (k === keyC) {
         expect(v).toEqual(valueC);
+      } else {
+        throw new Error(`Invalid key ${k}`);
       }
-      i += 1;
     }
     await map.forEach((v, k) => {
       if (k === keyA) {
@@ -136,6 +137,8 @@ describe('Map', () => {
         expect(v).toEqual(valueB);
       } else if (k === keyC) {
         expect(v).toEqual(valueC);
+      } else {
+        throw new Error(`Invalid key ${k}`);
       }
     });
   });
@@ -148,19 +151,19 @@ describe('Map', () => {
     const valueA = generateValue();
     const valueB = generateValue();
     const valueC = generateValue();
-    const map = new ObservedRemoveMap([[keyA, valueA], [keyB, valueB], [keyC, valueC]], { maxAge: 0, bufferPublishing: 0 });
+    const map = new ObservedRemoveMap(db, [[keyA, valueA], [keyB, valueB], [keyC, valueC]], { maxAge: 0, bufferPublishing: 0, namespace: uuid.v4() });
     await map.readyPromise;
     expect(map.size).toEqual(3);
     await map.clear();
     expect(map.size).toEqual(0);
     expect(map.insertQueue.length).toEqual(0);
     expect(map.deleteQueue.length).toEqual(0);
-    expect(map.deletions.size).toEqual(3);
+    expect((await map.deletions()).length).toEqual(3);
     await map.flush();
     expect(map.size).toEqual(0);
     expect(map.insertQueue.length).toEqual(0);
     expect(map.deleteQueue.length).toEqual(0);
-    expect(map.deletions.size).toEqual(0);
+    expect((await map.deletions()).length).toEqual(0);
   });
 
   test('Synchronize maps', async () => {
@@ -170,9 +173,9 @@ describe('Map', () => {
     const valueX = generateValue();
     const valueY = generateValue();
     const valueZ = generateValue();
-    const alice = new ObservedRemoveMap();
+    const alice = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await alice.readyPromise;
-    const bob = new ObservedRemoveMap();
+    const bob = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await bob.readyPromise;
     let aliceAddCount = 0;
     let bobAddCount = 0;
@@ -200,8 +203,8 @@ describe('Map', () => {
     await expect(bob.get(keyX)).resolves.toEqual(valueX);
     await expect(bob.get(keyY)).resolves.toEqual(valueY);
     await expect(bob.get(keyZ)).resolves.toEqual(valueZ);
-    await expect(alice).asyncIteratesTo([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
-    await expect(bob).asyncIteratesTo([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
+    await expect(alice).asyncIteratesTo(expect.arrayContaining([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]));
+    await expect(bob).asyncIteratesTo(expect.arrayContaining([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]));
     await bob.delete(keyX);
     await bob.delete(keyY);
     await bob.delete(keyZ);
@@ -214,8 +217,8 @@ describe('Map', () => {
     await expect(bob.get(keyX)).resolves.toBeUndefined();
     await expect(bob.get(keyY)).resolves.toBeUndefined();
     await expect(bob.get(keyZ)).resolves.toBeUndefined();
-    expect(alice).asyncIteratesTo([]);
-    expect(bob).asyncIteratesTo([]);
+    expect(alice).asyncIteratesTo(expect.arrayContaining([]));
+    expect(bob).asyncIteratesTo(expect.arrayContaining([]));
   });
 
   test('Flush deletions', async () => {
@@ -225,17 +228,17 @@ describe('Map', () => {
     const valueX = generateValue();
     const valueY = generateValue();
     const valueZ = generateValue();
-    const map = new ObservedRemoveMap([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]], { maxAge: 300 });
+    const map = new ObservedRemoveMap(db, [[keyX, valueX], [keyY, valueY], [keyZ, valueZ]], { maxAge: 300, namespace: uuid.v4() });
     await map.readyPromise;
     await map.delete(keyX);
     await map.delete(keyY);
     await map.delete(keyZ);
-    expect(map.deletions.size).toEqual(3);
+    expect((await map.deletions()).length).toEqual(3);
     await map.flush();
-    expect(map.deletions.size).toEqual(3);
+    expect((await map.deletions()).length).toEqual(3);
     await new Promise((resolve) => setTimeout(resolve, 400));
     await map.flush();
-    expect(map.deletions.size).toEqual(0);
+    expect((await map.deletions()).length).toEqual(0);
   });
 
 
@@ -244,8 +247,8 @@ describe('Map', () => {
     const keyY = uuid.v4();
     const valueX = generateValue();
     const valueY = generateValue();
-    const alice = new ObservedRemoveMap();
-    const bob = new ObservedRemoveMap();
+    const alice = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
+    const bob = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await alice.readyPromise;
     await bob.readyPromise;
     alice.on('publish', (message) => {
@@ -298,8 +301,8 @@ describe('Map', () => {
     const keyY = uuid.v4();
     const valueX = generateValue();
     const valueY = generateValue();
-    const alice = new ObservedRemoveMap();
-    const bob = new ObservedRemoveMap();
+    const alice = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
+    const bob = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await alice.readyPromise;
     await bob.readyPromise;
     await alice.set(keyX, valueX);
@@ -355,8 +358,8 @@ describe('Map', () => {
     const valueX = generateValue();
     const valueY = generateValue();
     const valueZ = generateValue();
-    const alice = new ObservedRemoveMap();
-    const bob = new ObservedRemoveMap();
+    const alice = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
+    const bob = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await alice.readyPromise;
     await bob.readyPromise;
     await alice.set(keyA, valueA);
@@ -370,8 +373,8 @@ describe('Map', () => {
     let aliceDeleteCount = 0;
     let bobDeleteCount = 0;
     await new Promise((resolve) => setTimeout(resolve, 100));
-    await expect(alice).asyncIteratesTo([[keyA, valueA], [keyB, valueB], [keyC, valueC]]);
-    await expect(bob).asyncIteratesTo([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]);
+    await expect(alice).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyB, valueB], [keyC, valueC]]));
+    await expect(bob).asyncIteratesTo(expect.arrayContaining([[keyX, valueX], [keyY, valueY], [keyZ, valueZ]]));
     alice.on('set', () => (aliceAddCount += 1));
     bob.on('set', () => (bobAddCount += 1));
     alice.on('delete', () => (aliceDeleteCount += 1));
@@ -396,14 +399,14 @@ describe('Map', () => {
     const key = uuid.v4();
     const value1 = generateValue();
     const value2 = generateValue();
-    const alice = new ObservedRemoveMap();
+    const alice = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await alice.readyPromise;
     await alice.set(key, value1);
     await alice.set(key, value2);
-    await expect(alice).asyncIteratesTo([[key, value2]]);
-    await expect(alice.entries()).asyncIteratesTo([[key, value2]]);
-    await expect(alice.keys()).asyncIteratesTo([key]);
-    await expect(alice.values()).asyncIteratesTo([value2]);
+    await expect(alice).asyncIteratesTo(expect.arrayContaining([[key, value2]]));
+    await expect(alice.entries()).asyncIteratesTo(expect.arrayContaining([[key, value2]]));
+    await expect(alice.keys()).asyncIteratesTo(expect.arrayContaining([key]));
+    await expect(alice.values()).asyncIteratesTo(expect.arrayContaining([value2]));
     await expect(alice.get(key)).resolves.toEqual(value2);
   });
 
@@ -438,7 +441,7 @@ describe('Map', () => {
       return [mapA, mapB];
     };
     for (let i = 0; i < 100; i += 1) {
-      const map = new ObservedRemoveMap();
+      const map = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
       await map.readyPromise;
       map.on('publish', (message) => publish(i, message));
       subscribe(i, (message) => map.process(message));
@@ -465,13 +468,13 @@ describe('Map', () => {
     while (aliceDeleteCount !== 3 || bobDeleteCount !== 3) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    await expect(alice).asyncIteratesTo([]);
-    await expect(bob).asyncIteratesTo([]);
+    await expect(alice).asyncIteratesTo(expect.arrayContaining([]));
+    await expect(bob).asyncIteratesTo(expect.arrayContaining([]));
   });
 
   test('Synchronize out of order sets', async () => {
-    const alice = new ObservedRemoveMap([]);
-    const bob = new ObservedRemoveMap([]);
+    const alice = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
+    const bob = new ObservedRemoveMap(db, [], { namespace: uuid.v4() });
     await alice.readyPromise;
     await bob.readyPromise;
     const key = uuid.v4();
