@@ -1,8 +1,8 @@
 # Observed-Remove Set and Map
 
-[![CircleCI](https://circleci.com/gh/wehriam/observed-remove.svg?style=svg)](https://circleci.com/gh/wehriam/observed-remove) [![npm version](https://badge.fury.io/js/observed-remove.svg)](http://badge.fury.io/js/observed-remove) [![codecov](https://codecov.io/gh/wehriam/observed-remove/branch/master/graph/badge.svg)](https://codecov.io/gh/wehriam/observed-remove)
+[![CircleCI](https://circleci.com/gh/wehriam/observed-remove-level.svg?style=svg)](https://circleci.com/gh/wehriam/observed-remove-level) [![npm version](https://badge.fury.io/js/observed-remove-level.svg)](http://badge.fury.io/js/observed-remove-level) [![codecov](https://codecov.io/gh/wehriam/observed-remove-level/branch/master/graph/badge.svg)](https://codecov.io/gh/wehriam/observed-remove-level)
 
-Eventually-consistent, conflict-free replicated data types (CRDT) [implemented](https://github.com/wehriam/observed-remove/blob/master/src/index.js) using native `Map` and `Set` objects.
+Eventually-consistent, conflict-free replicated data types (CRDT) [implemented](https://github.com/wehriam/observed-remove-level/blob/master/src/index.js) using LevelDB.
 
 ```js
 const os = require('os');
