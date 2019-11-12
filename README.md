@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/wehriam/observed-remove-level.svg?style=svg)](https://circleci.com/gh/wehriam/observed-remove-level) [![npm version](https://badge.fury.io/js/observed-remove-level.svg)](http://badge.fury.io/js/observed-remove-level) [![codecov](https://codecov.io/gh/wehriam/observed-remove-level/branch/master/graph/badge.svg)](https://codecov.io/gh/wehriam/observed-remove-level)
 
-Eventually-consistent, conflict-free replicated data types (CRDT) [implemented](https://github.com/wehriam/observed-remove-level/blob/master/src/index.js) using LevelDB.
+Eventually-consistent, conflict-free replicated data types (CRDT) [implemented](https://github.com/wehriam/observed-remove-level/blob/master/src/index.js) using [LevelDB](https://www.npmjs.com/package/level).
 
 ```js
 const os = require('os');
