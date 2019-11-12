@@ -38,13 +38,7 @@ class ObservedRemoveMap    extends EventEmitter {
     this.insertQueue = [];
     this.deleteQueue = [];
     this.size = 0;
-<<<<<<< Updated upstream
     this.readyPromise = this.init(entries);
-=======
-    this.readyPromise = this.init(entries).catch((error) => {
-      this.emit('error', error);
-    });
->>>>>>> Stashed changes
   }
 
   async init(entries                        ) {
