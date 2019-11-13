@@ -2,6 +2,7 @@
 
 const { EventEmitter } = require('events');
 const generateId = require('./generate-id');
+const { default: PQueue } = require('p-queue');
 
                 
                  
@@ -26,6 +27,7 @@ class ObservedRemoveMap    extends EventEmitter {
                     
                        
                
+                       
 
   constructor(db       , entries                        , options          = {}) {
     super();
@@ -39,6 +41,7 @@ class ObservedRemoveMap    extends EventEmitter {
     this.deleteQueue = [];
     this.size = 0;
     this.readyPromise = this.init(entries);
+    this.processQueue = new PQueue({ concurrency: 1 });
   }
 
   async init(entries                        ) {
@@ -191,7 +194,11 @@ class ObservedRemoveMap    extends EventEmitter {
     return Promise.all([this.pairs(), this.deletions()]);
   }
 
-  async process(queue                     , skipFlush           = false) {
+  process(queue                     , skipFlush           = false) {
+    return this.processQueue.add(() => this._process(queue, skipFlush)); // eslint-disable-line no-underscore-dangle
+  }
+
+  async _process(queue                     , skipFlush           = false) {
     const [insertions, deletions] = queue;
     for (const [id, key] of deletions) {
       await this.db.put(`${this.namespace}<${id}`, key);
@@ -397,6 +404,10 @@ class ObservedRemoveMap    extends EventEmitter {
         }
       });
     });
+  }
+
+  async shutdown() {
+    await this.processQueue.onIdle();
   }
 }
 

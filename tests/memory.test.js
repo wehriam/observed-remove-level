@@ -44,6 +44,7 @@ describe('Map Memory Test', () => {
         await map.publish();
       }
     }
+    await map.shutdown();
     console.log(JSON.stringify(memoryDelta(startMemoryUsage), null, 2));
   });
 });

@@ -2,6 +2,7 @@
 
 const { EventEmitter } = require('events');
 const generateId = require('./generate-id');
+const { default: PQueue } = require('p-queue');
 
 type Options = {
   maxAge?:number,
@@ -26,6 +27,7 @@ class ObservedRemoveMap<V> extends EventEmitter {
   namespace: string;
   prefixLength: number;
   size: number;
+  processQueue: PQueue;
 
   constructor(db:Object, entries?: Iterable<[string, V]>, options?:Options = {}) {
     super();
@@ -39,6 +41,7 @@ class ObservedRemoveMap<V> extends EventEmitter {
     this.deleteQueue = [];
     this.size = 0;
     this.readyPromise = this.init(entries);
+    this.processQueue = new PQueue({ concurrency: 1 });
   }
 
   async init(entries?: Iterable<[string, V]>) {
@@ -191,7 +194,11 @@ class ObservedRemoveMap<V> extends EventEmitter {
     return Promise.all([this.pairs(), this.deletions()]);
   }
 
-  async process(queue:[Array<*>, Array<*>], skipFlush?: boolean = false) {
+  process(queue:[Array<*>, Array<*>], skipFlush?: boolean = false) {
+    return this.processQueue.add(() => this._process(queue, skipFlush)); // eslint-disable-line no-underscore-dangle
+  }
+
+  async _process(queue:[Array<*>, Array<*>], skipFlush?: boolean = false) {
     const [insertions, deletions] = queue;
     for (const [id, key] of deletions) {
       await this.db.put(`${this.namespace}<${id}`, key);
@@ -397,6 +404,10 @@ class ObservedRemoveMap<V> extends EventEmitter {
         }
       });
     });
+  }
+
+  async shutdown() {
+    await this.processQueue.onIdle();
   }
 }
 

@@ -57,6 +57,7 @@ describe('Map', () => {
     await expect(map.keys()).asyncIteratesTo(expect.arrayContaining([keyA, keyB]));
     await expect(map).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyB, valueB]]));
     await expect(map.entries()).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyB, valueB]]));
+    await map.shutdown();
   });
 
 
@@ -107,6 +108,7 @@ describe('Map', () => {
     });
     await deleteAPromise;
     await deleteBPromise;
+    await map.shutdown();
   });
 
 
@@ -141,6 +143,7 @@ describe('Map', () => {
         throw new Error(`Invalid key ${k}`);
       }
     });
+    await map.shutdown();
   });
 
 
@@ -164,6 +167,7 @@ describe('Map', () => {
     expect(map.insertQueue.length).toEqual(0);
     expect(map.deleteQueue.length).toEqual(0);
     expect((await map.deletions()).length).toEqual(0);
+    await map.shutdown();
   });
 
   test('Synchronize maps', async () => {
@@ -217,8 +221,10 @@ describe('Map', () => {
     await expect(bob.get(keyX)).resolves.toBeUndefined();
     await expect(bob.get(keyY)).resolves.toBeUndefined();
     await expect(bob.get(keyZ)).resolves.toBeUndefined();
-    expect(alice).asyncIteratesTo(expect.arrayContaining([]));
-    expect(bob).asyncIteratesTo(expect.arrayContaining([]));
+    await expect(alice).asyncIteratesTo(expect.arrayContaining([]));
+    await expect(bob).asyncIteratesTo(expect.arrayContaining([]));
+    await alice.shutdown();
+    await bob.shutdown();
   });
 
   test('Flush deletions', async () => {
@@ -239,6 +245,7 @@ describe('Map', () => {
     await new Promise((resolve) => setTimeout(resolve, 400));
     await map.flush();
     expect((await map.deletions()).length).toEqual(0);
+    await map.shutdown();
   });
 
 
@@ -293,6 +300,8 @@ describe('Map', () => {
     await bobSetYPromise;
     await alice.delete(keyY);
     await bobDeleteYPromise;
+    await alice.shutdown();
+    await bob.shutdown();
   });
 
 
@@ -342,6 +351,8 @@ describe('Map', () => {
     await expect(alice.get(keyY)).resolves.toBeUndefined();
     await expect(bob.get(keyX)).resolves.toBeUndefined();
     await expect(bob.get(keyY)).resolves.toBeUndefined();
+    await alice.shutdown();
+    await bob.shutdown();
   });
 
 
@@ -392,6 +403,8 @@ describe('Map', () => {
     }
     await expect(alice).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
     await expect(bob).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
+    await alice.shutdown();
+    await bob.shutdown();
   });
 
 
@@ -408,6 +421,7 @@ describe('Map', () => {
     await expect(alice.keys()).asyncIteratesTo(expect.arrayContaining([key]));
     await expect(alice.values()).asyncIteratesTo(expect.arrayContaining([value2]));
     await expect(alice.get(key)).resolves.toEqual(value2);
+    await alice.shutdown();
   });
 
 
@@ -470,6 +484,8 @@ describe('Map', () => {
     }
     await expect(alice).asyncIteratesTo(expect.arrayContaining([]));
     await expect(bob).asyncIteratesTo(expect.arrayContaining([]));
+    await alice.shutdown();
+    await bob.shutdown();
   });
 
   test('Synchronize out of order sets', async () => {
@@ -498,6 +514,8 @@ describe('Map', () => {
     await alice.process(bobDump2);
     await expect(alice.get(key)).resolves.toBeUndefined();
     await expect(bob.get(key)).resolves.toBeUndefined();
+    await alice.shutdown();
+    await bob.shutdown();
   });
 });
 
