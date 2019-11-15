@@ -40,19 +40,17 @@ class ObservedRemoveMap    extends EventEmitter {
     this.insertQueue = [];
     this.deleteQueue = [];
     this.size = 0;
-    this.readyPromise = this.init(entries);
-    this.processQueue = new PQueue({ concurrency: 1 });
-  }
-
-  async init(entries                        ) {
-    await this.updateSize();
-    const promises = [];
-    if (entries) {
-      for (const [key, value] of entries) {
-        promises.push(this.set(key, value));
+    this.readyPromise = (async () => {
+      await this.updateSize();
+      const promises = [];
+      if (entries) {
+        for (const [key, value] of entries) {
+          promises.push(this.set(key, value));
+        }
       }
-    }
-    await Promise.all(promises);
+      await Promise.all(promises);
+    })();
+    this.processQueue = new PQueue({ concurrency: 1 });
   }
 
   async updateSize() {
@@ -124,12 +122,12 @@ class ObservedRemoveMap    extends EventEmitter {
     }
   }
 
-  async pairs() {
-    const pairs = [];
+  async pairs()                                       {
+    const pairs                              = [];
     const iterator = this.db.iterator({ gt: `${this.namespace}>`, lt: `${this.namespace}?` });
     while (true) {
       const [key, pair] = await new Promise((resolve, reject) => {
-        iterator.next((error             , k               , v          ) => {
+        iterator.next((error             , k               , v                    ) => {
           if (error) {
             reject(error);
           } else {
@@ -155,12 +153,12 @@ class ObservedRemoveMap    extends EventEmitter {
     return pairs;
   }
 
-  async deletions() {
+  async deletions()                                  {
     const deletions = [];
     const iterator = this.db.iterator({ gt: `${this.namespace}<`, lt: `${this.namespace}=` });
     while (true) {
       const [id, key] = await new Promise((resolve, reject) => {
-        iterator.next((error             , k               , v          ) => {
+        iterator.next((error             , k               , v               ) => {
           if (error) {
             reject(error);
           } else {
