@@ -66,6 +66,7 @@ describe('Signed Map', () => {
     await expect(map.keys()).asyncIteratesTo(expect.arrayContaining([keyA, keyB]));
     await expect(map).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyB, valueB]]));
     await expect(map.entries()).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyB, valueB]]));
+    await map.shutdown();
   });
 
   test('Throw on invalid signatures', async () => {
@@ -79,6 +80,7 @@ describe('Signed Map', () => {
     const id = generateId();
     await map.setSigned(keyA, valueA, id, sign(keyA, valueA, id));
     await await expect(map.deleteSigned(keyA, id, '***')).rejects.toThrowError(InvalidSignatureError);
+    await map.shutdown();
   });
 
   test('Throw on clear', async () => {
@@ -87,6 +89,7 @@ describe('Signed Map', () => {
     expect(() => {
       map.clear();
     }).toThrow();
+    await map.shutdown();
   });
 
 
@@ -134,6 +137,7 @@ describe('Signed Map', () => {
       alice.deleteSigned(keyY, id2, aliceSign(keyY, id2));
     });
     await expect(bob.processSigned(aliceMessage2)).rejects.toThrowError(InvalidSignatureError);
+    await Promise.all([alice.shutdown(), bob.shutdown()]);
   });
 
   test('Emit set and delete events', async () => {
@@ -185,6 +189,7 @@ describe('Signed Map', () => {
     });
     await deleteAPromise;
     await deleteBPromise;
+    await map.shutdown();
   });
 
   test('Iterate through values', async () => {
@@ -279,6 +284,7 @@ describe('Signed Map', () => {
     await expect(bob.get(keyZ)).resolves.toBeUndefined();
     await expect(alice).asyncIteratesTo(expect.arrayContaining([]));
     await expect(bob).asyncIteratesTo(expect.arrayContaining([]));
+    await Promise.all([alice.shutdown(), bob.shutdown()]);
   });
 
   test('Flush deletions', async () => {
@@ -358,6 +364,7 @@ describe('Signed Map', () => {
     await bobSetYPromise;
     await alice.deleteSigned(keyY, id2, sign(keyY, id2));
     await bobDeleteYPromise;
+    await Promise.all([alice.shutdown(), bob.shutdown()]);
   });
 
   test('Should not emit events for remote set/delete combos on sync', async () => {
@@ -407,6 +414,7 @@ describe('Signed Map', () => {
     await expect(alice.get(keyY)).resolves.toBeUndefined();
     await expect(bob.get(keyX)).resolves.toBeUndefined();
     await expect(bob.get(keyY)).resolves.toBeUndefined();
+    await Promise.all([alice.shutdown(), bob.shutdown()]);
   });
 
   test('Synchronize mixed maps using sync', async () => {
@@ -462,6 +470,7 @@ describe('Signed Map', () => {
     }
     await expect(alice).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
     await expect(bob).asyncIteratesTo(expect.arrayContaining([[keyA, valueA], [keyX, valueX], [keyB, valueB], [keyY, valueY], [keyC, valueC], [keyZ, valueZ]]));
+    await Promise.all([alice.shutdown(), bob.shutdown()]);
   });
 
   test('Key-value pairs should not repeat', async () => {
@@ -480,6 +489,7 @@ describe('Signed Map', () => {
     await expect(alice.keys()).asyncIteratesTo(expect.arrayContaining([k]));
     await expect(alice.values()).asyncIteratesTo(expect.arrayContaining([value2]));
     await expect(alice.get(k)).resolves.toEqual(value2);
+    await alice.shutdown();
   });
 
   test('Synchronizes 100 asynchrous maps', async () => {
@@ -544,5 +554,6 @@ describe('Signed Map', () => {
     }
     await expect(alice).asyncIteratesTo(expect.arrayContaining([]));
     await expect(bob).asyncIteratesTo(expect.arrayContaining([]));
+    await Promise.all([alice.shutdown(), bob.shutdown()]);
   });
 });

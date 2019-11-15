@@ -3,6 +3,7 @@
 const ObservedRemoveMap = require('./map');
 const getVerifier = require('./verifier');
 const { InvalidSignatureError } = require('./signed-error');
+const { default: PQueue } = require('p-queue');
 
                 
                  
@@ -32,12 +33,13 @@ class SignedObservedRemoveMap    extends ObservedRemoveMap    {
       }
       await Promise.all(promises);
     })();
+    this.signedProcessQueue = new PQueue({ concurrency: 1 });
   }
 
                                              
                                             
                                              
-
+                             
 
   async dump()                               {
     const signedInsertQueue = [];
@@ -78,6 +80,10 @@ class SignedObservedRemoveMap    extends ObservedRemoveMap    {
   }
 
   async processSigned(signedQueue                     , skipFlush           = false)               {
+    return this.signedProcessQueue.add(() => this._processSigned(signedQueue, skipFlush)); // eslint-disable-line  no-underscore-dangle
+  }
+
+  async _processSigned(signedQueue                     , skipFlush           = false)               { // eslint-disable-line  no-underscore-dangle
     const [signedInsertQueue, signedDeleteQueue] = signedQueue;
     const insertQueue = [];
     const deleteQueue = [];
@@ -138,6 +144,11 @@ class SignedObservedRemoveMap    extends ObservedRemoveMap    {
 
   delete() {
     throw new Error('Unsupported method delete(), use deleteSignedId()');
+  }
+
+  async shutdown() {
+    await this.signedProcessQueue.onIdle();
+    await super.shutdown();
   }
 }
 

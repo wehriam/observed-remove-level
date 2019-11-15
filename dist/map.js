@@ -405,6 +405,7 @@ class ObservedRemoveMap    extends EventEmitter {
   }
 
   async shutdown() {
+    clearTimeout(this.publishTimeout);
     await this.processQueue.onIdle();
   }
 }
