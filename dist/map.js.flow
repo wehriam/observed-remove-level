@@ -266,7 +266,7 @@ class ObservedRemoveMap<V> extends EventEmitter {
   async getPair(key:string): Promise<[string, V] | void> { // eslint-disable-line consistent-return
     try {
       const pair = await this.db.get(`${this.namespace}>${key}`);
-      return pair[1];
+      return pair;
     } catch (error) {
       if (error.notFound) {
         return; // eslint-disable-line consistent-return
