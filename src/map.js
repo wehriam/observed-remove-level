@@ -7,7 +7,8 @@ const { default: PQueue } = require('p-queue');
 type Options = {
   maxAge?:number,
   bufferPublishing?:number,
-  namespace?: string
+  namespace?: string,
+  format?: string
 };
 
 /**
@@ -260,6 +261,18 @@ class ObservedRemoveMap<V> extends EventEmitter {
     }
     this.insertQueue.push(insertMessage);
     await this.dequeue();
+  }
+
+  async getPair(key:string): Promise<[string, V] | void> { // eslint-disable-line consistent-return
+    try {
+      const pair = await this.db.get(`${this.namespace}>${key}`);
+      return pair[1];
+    } catch (error) {
+      if (error.notFound) {
+        return; // eslint-disable-line consistent-return
+      }
+      throw error;
+    }
   }
 
   async get(key:string): Promise<V | void> { // eslint-disable-line consistent-return

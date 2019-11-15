@@ -7,7 +7,8 @@ const { default: PQueue } = require('p-queue');
                 
                  
                            
-                    
+                     
+                 
   
 
 /**
@@ -260,6 +261,18 @@ class ObservedRemoveMap    extends EventEmitter {
     }
     this.insertQueue.push(insertMessage);
     await this.dequeue();
+  }
+
+  async getPair(key       )                              { // eslint-disable-line consistent-return
+    try {
+      const pair = await this.db.get(`${this.namespace}>${key}`);
+      return pair[1];
+    } catch (error) {
+      if (error.notFound) {
+        return; // eslint-disable-line consistent-return
+      }
+      throw error;
+    }
   }
 
   async get(key       )                    { // eslint-disable-line consistent-return
