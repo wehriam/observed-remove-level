@@ -70,9 +70,9 @@ See: <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_O
 
 #### Parameters
 
--   `db` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)** 
--   `entries` **Iterable&lt;\[[string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String), V]>?** 
--   `options` **Options**  (optional, default `{}`)
+-   `db`  
+-   `entries`  
+-   `options`   (optional, default `{}`)
 
 #### sync
 
@@ -87,5 +87,3 @@ Returns **void**
 #### dump
 
 Return an array containing all of the map's insertions and deletions.
-
-Returns **[Promise](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;\[[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>, [Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;any>]>** 

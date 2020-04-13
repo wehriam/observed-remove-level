@@ -36,10 +36,10 @@ class SignedObservedRemoveMap<V> extends ObservedRemoveMap<V> {
     this.signedProcessQueue = new PQueue({ concurrency: 1 });
   }
 
-  insertionSignatureMap: Map<string, string>;
-  deletionSignatureMap: Map<string, string>;
-  verify: (string, ...Array<any>) => boolean;
-  signedProcessQueue: PQueue;
+  declare insertionSignatureMap: Map<string, string>;
+  declare deletionSignatureMap: Map<string, string>;
+  declare verify: (string, ...Array<any>) => boolean;
+  declare signedProcessQueue: PQueue;
 
   async dump():Promise<[Array<*>, Array<*>]> {
     const signedInsertQueue = [];

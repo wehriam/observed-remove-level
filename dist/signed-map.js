@@ -36,10 +36,10 @@ class SignedObservedRemoveMap    extends ObservedRemoveMap    {
     this.signedProcessQueue = new PQueue({ concurrency: 1 });
   }
 
-                                             
-                                            
-                                             
-                             
+                                                     
+                                                    
+                                                     
+                                     
 
   async dump()                               {
     const signedInsertQueue = [];

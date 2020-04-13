@@ -18,17 +18,17 @@ type Options = {
  * See: {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map}
  */
 class ObservedRemoveMap<V> extends EventEmitter {
-  maxAge: number;
-  bufferPublishing: number;
-  deleteQueue: Array<*>;
-  insertQueue: Array<*>;
-  publishTimeout: null | TimeoutID;
-  readyPromise: Promise<void>;
-  db: Object;
-  namespace: string;
-  prefixLength: number;
-  size: number;
-  processQueue: PQueue;
+  declare maxAge: number;
+  declare bufferPublishing: number;
+  declare deleteQueue: Array<*>;
+  declare insertQueue: Array<*>;
+  declare publishTimeout: null | TimeoutID;
+  declare readyPromise: Promise<void>;
+  declare db: Object;
+  declare namespace: string;
+  declare prefixLength: number;
+  declare size: number;
+  declare processQueue: PQueue;
 
   constructor(db:Object, entries?: Iterable<[string, V]>, options?:Options = {}) {
     super();

@@ -18,17 +18,17 @@ const { default: PQueue } = require('p-queue');
  * See: {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map}
  */
 class ObservedRemoveMap    extends EventEmitter {
-                 
-                           
-                        
-                        
+                         
                                    
-                              
-             
-                    
+                                
+                                
+                                           
+                                      
+                     
+                            
+                               
                        
-               
-                       
+                               
 
   constructor(db       , entries                        , options          = {}) {
     super();
