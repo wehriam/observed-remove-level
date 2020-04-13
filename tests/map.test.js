@@ -517,5 +517,57 @@ describe('Map', () => {
     await alice.shutdown();
     await bob.shutdown();
   });
+
+
+  test('Affirm values if synchronization happens twice', async () => {
+    const keyA = uuid.v4();
+    const keyB = uuid.v4();
+    const valueA = generateValue();
+    const valueB = generateValue();
+    const alice = new ObservedRemoveMap(db, [[keyA, valueA]], { namespace: uuid.v4() });
+    const bob = new ObservedRemoveMap(db, [[keyB, valueB]], { namespace: uuid.v4() });
+    await alice.readyPromise;
+    await bob.readyPromise;
+    const setAPromise = new Promise((resolve) => {
+      bob.once('set', (k, v) => {
+        expect(k).toEqual(keyA);
+        expect(v).toEqual(valueA);
+        resolve();
+      });
+    });
+    const setBPromise = new Promise((resolve) => {
+      alice.once('set', (k, v) => {
+        expect(k).toEqual(keyB);
+        expect(v).toEqual(valueB);
+        resolve();
+      });
+    });
+    const aliceDump = await alice.dump();
+    const bobDump = await bob.dump();
+    alice.process(bobDump);
+    bob.process(aliceDump);
+    await setAPromise;
+    await setBPromise;
+    const affirmAPromise = new Promise((resolve) => {
+      bob.once('affirm', (k, v) => {
+        expect(k).toEqual(keyA);
+        expect(v).toEqual(valueA);
+        resolve();
+      });
+    });
+    const affirmBPromise = new Promise((resolve) => {
+      alice.once('affirm', (k, v) => {
+        expect(k).toEqual(keyB);
+        expect(v).toEqual(valueB);
+        resolve();
+      });
+    });
+    alice.process(bobDump);
+    bob.process(aliceDump);
+    await affirmAPromise;
+    await affirmBPromise;
+    await alice.shutdown();
+    await bob.shutdown();
+  });
 });
 

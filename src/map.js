@@ -216,6 +216,8 @@ class ObservedRemoveMap<V> extends EventEmitter {
         if (pair[0] < id) {
           await this.db.put(`${this.namespace}>${key}`, [id, value]);
           this.emit('set', key, value, pair[1]);
+        } else if (pair[0] === id) {
+          this.emit('affirm', key, value, pair[1]);
         }
       } catch (error) {
         if (!error.notFound) {
