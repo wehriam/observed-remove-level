@@ -214,7 +214,11 @@ class ObservedRemoveMap<V> extends EventEmitter {
       try {
         const pair = await this.db.get(`${this.namespace}>${key}`);
         if (pair[0] < id) {
-          await this.db.put(`${this.namespace}>${key}`, [id, value]);
+          if (typeof value === 'undefined') {
+            await this.db.put(`${this.namespace}>${key}`, [id]);
+          } else {
+            await this.db.put(`${this.namespace}>${key}`, [id, value]);
+          }
           this.emit('set', key, value, pair[1]);
         } else if (pair[0] === id) {
           this.emit('affirm', key, value, pair[1]);
@@ -223,7 +227,11 @@ class ObservedRemoveMap<V> extends EventEmitter {
         if (!error.notFound) {
           throw error;
         }
-        await this.db.put(`${this.namespace}>${key}`, [id, value]);
+        if (typeof value === 'undefined') {
+          await this.db.put(`${this.namespace}>${key}`, [id]);
+        } else {
+          await this.db.put(`${this.namespace}>${key}`, [id, value]);
+        }
         this.size += 1;
         this.emit('set', key, value, undefined);
       }
