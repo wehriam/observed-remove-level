@@ -1,14 +1,14 @@
 // @flow
 
-const expect = require('expect');
-const uuid = require('uuid');
-const os = require('os');
-const path = require('path');
-const level = require('level');
-const { InvalidSignatureError, SignedObservedRemoveMap, getSigner, generateId } = require('../src');
-const { generateValue } = require('./lib/values');
-const NodeRSA = require('node-rsa');
-require('./lib/async-iterator-comparison');
+import NodeRSA from 'node-rsa';
+import expect from 'expect';
+import { v4 as uuidv4 } from 'uuid';
+import os from 'os';
+import path from 'path';
+import level from 'level';
+import { InvalidSignatureError, SignedObservedRemoveMap, getSigner, generateId } from '../src';
+import { generateValue } from './lib/values';
+import './lib/async-iterator-comparison';
 
 const privateKey = new NodeRSA({ b: 512 });
 const sign = getSigner(privateKey.exportKey('pkcs1-private-pem'));
@@ -17,21 +17,21 @@ const key = privateKey.exportKey('pkcs1-public-pem');
 describe('Signed Map', () => {
   let db;
 
-  beforeAll(async () => {
-    const location = path.join(os.tmpdir(), uuid.v4());
+  beforeEach(async () => {
+    const location = path.join(os.tmpdir(), uuidv4());
     db = level(location, { valueEncoding: 'json' });
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await db.close();
   });
 
   test('Set and delete values', async () => {
-    const keyA = uuid.v4();
-    const keyB = uuid.v4();
+    const keyA = uuidv4();
+    const keyB = uuidv4();
     const valueA = generateValue();
     const valueB = generateValue();
-    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await map.readyPromise;
     expect(map.size).toEqual(0);
     const id1 = generateId();
@@ -70,11 +70,11 @@ describe('Signed Map', () => {
   });
 
   test('Throw on invalid signatures', async () => {
-    const keyA = uuid.v4();
+    const keyA = uuidv4();
     const valueA = generateValue();
-    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await map.readyPromise;
-    const badMap = new SignedObservedRemoveMap(db, [[keyA, valueA, generateId(), '***']], { key, namespace: uuid.v4() });
+    const badMap = new SignedObservedRemoveMap(db, [[keyA, valueA, generateId(), '***']], { key, namespace: uuidv4() });
     await expect(badMap.readyPromise).rejects.toThrowError(InvalidSignatureError);
     await expect(map.setSigned(keyA, valueA, generateId(), '***')).rejects.toThrowError(InvalidSignatureError);
     const id = generateId();
@@ -84,7 +84,7 @@ describe('Signed Map', () => {
   });
 
   test('Throw on clear', async () => {
-    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await map.readyPromise;
     expect(() => {
       map.clear();
@@ -100,8 +100,8 @@ describe('Signed Map', () => {
     const bobPrivateKey = new NodeRSA({ b: 512 });
     const bobSign = getSigner(bobPrivateKey.exportKey('pkcs1-private-pem'));
     const bobKey = bobPrivateKey.exportKey('pkcs1-public-pem');
-    const keyX = uuid.v4();
-    const keyY = uuid.v4();
+    const keyX = uuidv4();
+    const keyY = uuidv4();
     const valueX = generateValue();
     const valueY = generateValue();
     const alice = new SignedObservedRemoveMap(db, [], { key: aliceKey });
@@ -141,11 +141,11 @@ describe('Signed Map', () => {
   });
 
   test('Emit set and delete events', async () => {
-    const keyA = uuid.v4();
-    const keyB = uuid.v4();
+    const keyA = uuidv4();
+    const keyB = uuidv4();
     const valueA = generateValue();
     const valueB = generateValue();
-    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await map.readyPromise;
     const id1 = generateId();
     const setAPromise = new Promise((resolve) => {
@@ -193,16 +193,16 @@ describe('Signed Map', () => {
   });
 
   test('Iterate through values', async () => {
-    const keyA = uuid.v4();
-    const keyB = uuid.v4();
-    const keyC = uuid.v4();
+    const keyA = uuidv4();
+    const keyB = uuidv4();
+    const keyC = uuidv4();
     const valueA = generateValue();
     const valueB = generateValue();
     const valueC = generateValue();
     const idA = generateId();
     const idB = generateId();
     const idC = generateId();
-    const map = new SignedObservedRemoveMap(db, [[keyA, valueA, idA, sign(keyA, valueA, idA)], [keyB, valueB, idB, sign(keyB, valueB, idB)], [keyC, valueC, idC, sign(keyC, valueC, idC)]], { key, namespace: uuid.v4() });
+    const map = new SignedObservedRemoveMap(db, [[keyA, valueA, idA, sign(keyA, valueA, idA)], [keyB, valueB, idB, sign(keyB, valueB, idB)], [keyC, valueC, idC, sign(keyC, valueC, idC)]], { key, namespace: uuidv4() });
     await map.readyPromise;
     for await (const [k, v] of map) { // eslint-disable-line no-restricted-syntax
       if (k === keyA) {
@@ -230,14 +230,14 @@ describe('Signed Map', () => {
   });
 
   test('Synchronize maps', async () => {
-    const keyX = uuid.v4();
-    const keyY = uuid.v4();
-    const keyZ = uuid.v4();
+    const keyX = uuidv4();
+    const keyY = uuidv4();
+    const keyZ = uuidv4();
     const valueX = generateValue();
     const valueY = generateValue();
     const valueZ = generateValue();
-    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
-    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
+    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await Promise.all([alice.readyPromise, bob.readyPromise]);
     let aliceAddCount = 0;
     let bobAddCount = 0;
@@ -288,16 +288,16 @@ describe('Signed Map', () => {
   });
 
   test('Flush deletions', async () => {
-    const keyX = uuid.v4();
-    const keyY = uuid.v4();
-    const keyZ = uuid.v4();
+    const keyX = uuidv4();
+    const keyY = uuidv4();
+    const keyZ = uuidv4();
     const valueX = generateValue();
     const valueY = generateValue();
     const valueZ = generateValue();
     const idX = generateId();
     const idY = generateId();
     const idZ = generateId();
-    const map = new SignedObservedRemoveMap(db, [[keyX, valueX, idX, sign(keyX, valueX, idX)], [keyY, valueY, idY, sign(keyY, valueY, idY)], [keyZ, valueZ, idZ, sign(keyZ, valueZ, idZ)]], { maxAge: 300, key, namespace: uuid.v4() });
+    const map = new SignedObservedRemoveMap(db, [[keyX, valueX, idX, sign(keyX, valueX, idX)], [keyY, valueY, idY, sign(keyY, valueY, idY)], [keyZ, valueZ, idZ, sign(keyZ, valueZ, idZ)]], { maxAge: 300, key, namespace: uuidv4() });
     await map.readyPromise;
     await map.deleteSigned(keyX, idX, sign(keyX, idX));
     await map.deleteSigned(keyY, idY, sign(keyY, idY));
@@ -313,12 +313,12 @@ describe('Signed Map', () => {
 
 
   test('Synchronize set and delete events', async () => {
-    const keyX = uuid.v4();
-    const keyY = uuid.v4();
+    const keyX = uuidv4();
+    const keyY = uuidv4();
     const valueX = generateValue();
     const valueY = generateValue();
-    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
-    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
+    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await Promise.all([alice.readyPromise, bob.readyPromise]);
     alice.on('publish', (message) => {
       bob.processSigned(message);
@@ -368,12 +368,12 @@ describe('Signed Map', () => {
   });
 
   test('Should not emit events for remote set/delete combos on sync', async () => {
-    const keyX = uuid.v4();
-    const keyY = uuid.v4();
+    const keyX = uuidv4();
+    const keyY = uuidv4();
     const valueX = generateValue();
     const valueY = generateValue();
-    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
-    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
+    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await Promise.all([alice.readyPromise, bob.readyPromise]);
     const id1 = generateId();
     await alice.setSigned(keyX, valueX, id1, sign(keyX, valueX, id1));
@@ -419,20 +419,20 @@ describe('Signed Map', () => {
 
   test('Synchronize mixed maps using sync', async () => {
     let id;
-    const keyA = uuid.v4();
-    const keyB = uuid.v4();
-    const keyC = uuid.v4();
-    const keyX = uuid.v4();
-    const keyY = uuid.v4();
-    const keyZ = uuid.v4();
+    const keyA = uuidv4();
+    const keyB = uuidv4();
+    const keyC = uuidv4();
+    const keyX = uuidv4();
+    const keyY = uuidv4();
+    const keyZ = uuidv4();
     const valueA = generateValue();
     const valueB = generateValue();
     const valueC = generateValue();
     const valueX = generateValue();
     const valueY = generateValue();
     const valueZ = generateValue();
-    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
-    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
+    const bob = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await Promise.all([alice.readyPromise, bob.readyPromise]);
     id = generateId();
     await alice.setSigned(keyA, valueA, id, sign(keyA, valueA, id));
@@ -475,10 +475,10 @@ describe('Signed Map', () => {
 
   test('Key-value pairs should not repeat', async () => {
     let id;
-    const k = uuid.v4();
+    const k = uuidv4();
     const value1 = generateValue();
     const value2 = generateValue();
-    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+    const alice = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
     await alice.readyPromise;
     id = generateId();
     await alice.setSigned(k, value1, id, sign(k, value1, id));
@@ -493,21 +493,22 @@ describe('Signed Map', () => {
   });
 
   test('Synchronizes 100 asynchrous maps', async () => {
-    const keyA = uuid.v4();
-    const keyB = uuid.v4();
-    const keyC = uuid.v4();
+    const keyA = uuidv4();
+    const keyB = uuidv4();
+    const keyC = uuidv4();
     const valueA = generateValue();
     const valueB = generateValue();
     const valueC = generateValue();
     const maps = [];
     const callbacks = [];
+    const timeouts = [];
     const publish = (sourceId:number, message:Buffer) => {
       for (let i = 0; i < callbacks.length; i += 1) {
         const [targetId, callback] = callbacks[i];
         if (targetId === sourceId) {
           continue;
         }
-        setTimeout(() => callback(message), Math.round(1000 * Math.random()));
+        timeouts.push(setTimeout(() => callback(message), Math.round(1000 * Math.random())));
       }
     };
     const subscribe = (targetId: number, callback:Function) => {
@@ -522,7 +523,7 @@ describe('Signed Map', () => {
       return [mapA, mapB];
     };
     for (let i = 0; i < 100; i += 1) {
-      const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuid.v4() });
+      const map = new SignedObservedRemoveMap(db, [], { key, namespace: uuidv4() });
       await map.readyPromise;
       map.on('publish', (message) => publish(i, message));
       subscribe(i, (message) => map.processSigned(message));
@@ -554,6 +555,11 @@ describe('Signed Map', () => {
     }
     await expect(alice).asyncIteratesTo(expect.arrayContaining([]));
     await expect(bob).asyncIteratesTo(expect.arrayContaining([]));
-    await Promise.all([alice.shutdown(), bob.shutdown()]);
+    for (const timeout of timeouts) {
+      clearTimeout(timeout);
+    }
+    for (const map of maps) {
+      await map.shutdown();
+    }
   });
 });

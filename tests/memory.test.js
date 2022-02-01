@@ -1,12 +1,11 @@
 // @flow
 
-// const expect = require('expect');
-const os = require('os');
-const path = require('path');
-const level = require('level');
-const uuid = require('uuid');
-const { ObservedRemoveMap } = require('../src');
-const { generateValue } = require('./lib/values');
+import os from 'os';
+import path from 'path';
+import level from 'level';
+import { v4 as uuidv4 } from 'uuid';
+import { ObservedRemoveMap } from '../src';
+import { generateValue } from './lib/values';
 
 jest.setTimeout(60000);
 
@@ -24,12 +23,12 @@ const memoryDelta = (start:Object) => {
 describe('Map Memory Test', () => {
   let db;
 
-  beforeAll(async () => {
-    const location = path.join(os.tmpdir(), uuid.v4());
+  beforeEach(async () => {
+    const location = path.join(os.tmpdir(), uuidv4());
     db = level(location, { valueEncoding: 'json' });
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await db.close();
   });
 
@@ -37,7 +36,7 @@ describe('Map Memory Test', () => {
     const map = new ObservedRemoveMap(db);
     const startMemoryUsage = process.memoryUsage();
     for (let i = 0; i < 100000; i += 1) {
-      const key = uuid.v4();
+      const key = uuidv4();
       const value = generateValue();
       await map.set(key, value);
       if (i % 1000 === 1) {
